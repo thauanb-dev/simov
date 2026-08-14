@@ -1,0 +1,999 @@
+/* ==========================================================================
+   SIMOV WEB - UI Melhorada
+   Reskin visual + pequenas melhorias funcionais por cima do template legado
+   (ASP.NET WebForms, layout em tabelas, prototype.js, AjaxControlToolkit).
+   Import feito com !important quando preciso vencer estilos inline
+   gerados pelo servidor (ex.: style="color:Gray;" nos cabecalhos da grid).
+   ========================================================================== */
+
+:root {
+  --simov-bg: #f0f2f5;
+  --simov-surface: #ffffff;
+  --simov-border: #e1e6eb;
+  --simov-border-strong: #c6cfd7;
+  --simov-text: #1a2129;
+  --simov-text-muted: #5b6773;
+  --simov-primary: #0e8f5f;
+  --simov-primary-hover: #0b744c;
+  --simov-primary-contrast: #ffffff;
+  --simov-header-bg: #123c33;
+  --simov-header-text: #eaf2ef;
+  --simov-row-alt: #f5f7f9;
+  --simov-row-hover: #e6f5ee;
+  --simov-danger: #c0392b;
+  --simov-radius: 4px;
+  --simov-radius-lg: 6px;
+  --simov-shadow: 0 1px 2px rgba(16, 24, 32, 0.05);
+  --simov-shadow-lg: 0 4px 14px rgba(16, 24, 32, 0.16);
+  color-scheme: light;
+}
+
+/* Tema escuro "matrix", na mesma paleta usada no NeroDesk
+   (modules/process-management/style.css): preto esverdeado, verde neon
+   como destaque, dados em monoespacada. As tres camadas de fundo
+   (bg < surface < row-alt) precisam ficar visivelmente diferentes uma da
+   outra, senao paineis, campos e cabecalhos se misturam num borrao preto so. */
+html.simov-dark-mode {
+  --simov-bg: #050f0a;
+  --simov-surface: #0b2116;
+  --simov-border: rgba(84, 255, 160, 0.22);
+  --simov-border-strong: rgba(84, 255, 160, 0.45);
+  --simov-text: #eafff2;
+  --simov-text-muted: #8fc2a3;
+  --simov-primary: #35ff84;
+  --simov-primary-hover: #6dffab;
+  --simov-primary-contrast: #01120a;
+  --simov-header-bg: #071a11;
+  --simov-header-text: #baffd8;
+  --simov-row-alt: #123222;
+  /* Solida, nao rgba translucida: um overlay transparente deixa vazar
+     qualquer fundo claro que ainda exista por baixo (nativo do site),
+     resultando num hover esbranquicado em vez de um verde escuro solido. */
+  --simov-row-hover: #1a4a30;
+  --simov-danger: #ff5f7e;
+  --simov-mono: "Consolas", "Courier New", monospace;
+
+  /* Sem isso, o navegador continua desenhando pecas nativas (lista aberta
+     de <select>, calendario de <input type=date>, etc.) no tema claro do
+     SO, mesmo com todo o resto da pagina escuro - aparecem como blocos
+     brancos soltos. */
+  color-scheme: dark;
+}
+
+:root {
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Base                                                                    */
+/* ---------------------------------------------------------------------- */
+
+html.simov-dark-mode,
+html.simov-dark-mode body {
+  background-color: var(--simov-bg) !important;
+}
+
+body {
+  background-color: var(--simov-bg);
+  color: var(--simov-text) !important;
+  font-family: "Segoe UI", "Trebuchet MS", Tahoma, Arial, sans-serif;
+}
+
+html.simov-dark-mode body {
+  background-image:
+    linear-gradient(rgba(53, 255, 132, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(53, 255, 132, 0.035) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+html.simov-dark-mode,
+html.simov-dark-mode * {
+  scrollbar-color: rgba(53, 255, 132, 0.4) var(--simov-bg);
+}
+
+html.simov-dark-mode ::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+html.simov-dark-mode ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+html.simov-dark-mode ::-webkit-scrollbar-thumb {
+  background: rgba(53, 255, 132, 0.32);
+  border-radius: 999px;
+}
+
+html.simov-dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(53, 255, 132, 0.5);
+}
+
+/* Sem max-width/centralizacao: a tela usa a largura toda disponivel, o que
+   importa tanto num monitor largo (mais colunas de dado visiveis) quanto
+   numa janela estreita ancorada ao lado de outro app (nao sobra margem
+   morta). */
+#container {
+  width: 100%;
+  margin: 0;
+  background: transparent;
+}
+
+/* Cabecalho / logo */
+#main,
+#diference {
+  background: var(--simov-bg);
+}
+
+/* Uma unica barra compacta: logo + links do usuario a esquerda, modulo
+   atual a direita - em vez de duas faixas empilhadas (links, depois um
+   bloco colorido inteiro so pro nome do modulo). */
+#topo {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px 14px;
+  height: 39px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-bottom: 1px solid var(--simov-border);
+}
+
+/* Logo removida: nao agrega nada num topo minimalista e so ocupa espaco. */
+#marca {
+  display: none;
+}
+
+#ususario {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  gap: 2px 12px;
+}
+
+#ususario a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--simov-text-muted) !important;
+  text-decoration: none !important;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+#ususario a:hover {
+  color: var(--simov-primary) !important;
+}
+
+/* "Suporte" e "Ajuda" nao agregam no dia a dia - fora. */
+#ctl00_WUC_NavegacaoTopo1_hlkSuporte,
+#ctl00_WUC_NavegacaoTopo1_hlkAjuda {
+  display: none !important;
+}
+
+/* Troca os icones .png antigos (pequenos, baixa resolucao) por icones
+   tipograficos, consistentes com o resto da extensao (que ja usa
+   caracteres em vez de imagem pros proprios controles). */
+#ususario a img {
+  display: none;
+}
+
+#ctl00_WUC_NavegacaoTopo1_hlkUsuario::before {
+  content: "\1F464";
+  font-size: 10px;
+}
+
+#ctl00_WUC_NavegacaoTopo1_lkbLogoff::before {
+  content: "\23FB";
+  font-size: 11px;
+}
+
+.modulo {
+  background: none !important;
+  margin-left: auto;
+}
+
+.modulo h3,
+#tituloArea {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--simov-text-muted) !important;
+  white-space: nowrap;
+}
+
+html.simov-dark-mode .modulo h3,
+html.simov-dark-mode #tituloArea {
+  color: var(--simov-primary) !important;
+  text-shadow: 0 0 8px rgba(53, 255, 132, 0.3);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Menu lateral                                                            */
+/* ---------------------------------------------------------------------- */
+
+#menu.menu {
+  background-color: var(--simov-surface) !important;
+  border-right: 1px solid var(--simov-border-strong);
+  padding: 4px 0 16px;
+  position: relative;
+}
+
+#menu.menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#menu.menu > ul > li {
+  border-bottom: 1px solid var(--simov-border);
+}
+
+#menu.menu a {
+  display: block;
+  padding: 6px 14px;
+  color: var(--simov-text) !important;
+  text-decoration: none !important;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+#menu.menu > ul > li > a {
+  font-weight: 600;
+  color: var(--simov-primary) !important;
+}
+
+html.simov-dark-mode #menu.menu > ul > li > a {
+  text-shadow: 0 0 8px rgba(53, 255, 132, 0.3);
+}
+
+/* O site provavelmente aplica uma classe nativa de "pagina atual/selecionado"
+   num <li>/<a> especifico do menu (fundo claro, pensado pro tema original).
+   Nao sabemos o nome exato dela sem inspecionar o style.css do site, entao
+   forcamos transparente em qualquer estado de link, deixando so o :hover
+   (definido depois, com prioridade) trazer fundo de volta. */
+#menu.menu li,
+#menu.menu a,
+#menu.menu a:link,
+#menu.menu a:visited,
+#menu.menu a:focus,
+#menu.menu a:active {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#menu.menu a:hover {
+  background-color: var(--simov-row-hover) !important;
+  color: var(--simov-primary) !important;
+}
+
+#menu.menu ul ul {
+  background-color: var(--simov-row-alt) !important;
+  border-left: 2px solid var(--simov-border);
+  margin-left: 16px;
+}
+
+#menu.menu ul ul li a {
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--simov-text-muted) !important;
+}
+
+#menu.menu ul ul li a:hover {
+  color: var(--simov-primary) !important;
+}
+
+.simov-ext-menu-toggle {
+  padding: 0;
+  background: var(--simov-surface);
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+  color: var(--simov-text-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.simov-ext-menu-toggle:hover {
+  background: var(--simov-row-hover) !important;
+  color: var(--simov-primary) !important;
+}
+
+/* Encaixado no fluxo normal do "#topo" (ao lado do "a/A" de fonte) - nunca
+   sobrepoe conteudo, e sobrevive ao recolhimento do menu porque vive fora
+   da <td> que e escondida. */
+.simov-ext-menu-toggle-inline {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+
+/* Alternativa apenas para o caso raro de a pagina nao ter "#topo". */
+.simov-ext-menu-toggle-floating {
+  position: fixed;
+  left: 8px;
+  top: 8px;
+  z-index: 2147483000;
+  width: 30px;
+  height: 30px;
+  box-shadow: var(--simov-shadow);
+}
+
+/* Celulas de tabela ignoram width:0 em layout automatico, entao a forma
+   confiavel de recolher a coluna do menu e tira-la do fluxo da tabela. */
+#menu.menu.simov-ext-collapsed {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Conteudo / faixa superior                                               */
+/* ---------------------------------------------------------------------- */
+
+#conteudo.content {
+  background-color: var(--simov-surface) !important;
+  padding: 10px 16px !important;
+}
+
+/* O style.css original do site pinta ".faixa"/".identifica_acao" e seus
+   ".left"/".right"/".items" internos (e a tabela "a/A" de acessibilidade)
+   com um fundo verde-claro decorativo (e recortes em seta entre as abas)
+   pensado pro tema claro nativo. Precisamos neutralizar com especificidade
+   maior que ".faixa .right" etc - por isso o prefixo "#conteudo", que
+   nenhuma regra generica do site vai igualar ou superar. */
+#conteudo .faixa,
+#conteudo .faixa .left,
+#conteudo .faixa .right,
+#conteudo .faixa .items,
+#conteudo .identifica_acao,
+#conteudo .identifica_acao .left,
+#conteudo .identifica_acao .right,
+#conteudo table.fontSize,
+#conteudo table.fontSize td {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#conteudo .faixa *::before,
+#conteudo .faixa *::after,
+#conteudo .identifica_acao *::before,
+#conteudo .identifica_acao *::after {
+  background: none !important;
+  border-color: transparent !important;
+}
+
+/* ".faixa" ficou redundante por completo: as abas "Pesquisa"/"Cadastro"
+   duplicavam nosso cabecalho de pesquisa recolhivel e o link "novo", e o
+   widget "a/A" (table.fontSize) foi movido pra dentro de "#topo" via JS
+   (moveFontSizeWidgetToTopo em content.js) - tudo numa unica barra
+   compacta no topo. Nao sobra nada em ".faixa" pra mostrar. */
+.faixa {
+  display: none !important;
+}
+
+/* Widget nativo de tamanho de fonte, agora dentro de "#topo". */
+#topo table.fontSize {
+  margin-left: 8px;
+}
+
+/* O style.css nativo do site coloca uma seta/imagem decorativa de fundo
+   em cada <li> (efeito "passo a passo" entre as abas) - remove porque
+   nao combina com o visual novo e cria um recorte estranho no tema escuro. */
+#conteudo ul.menu_faixa li,
+#conteudo ul.menu_faixa li::before,
+#conteudo ul.menu_faixa li::after {
+  display: inline-block;
+  background: none !important;
+  background-image: none !important;
+}
+
+ul.menu_faixa a {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: var(--simov-radius);
+  background: var(--simov-row-alt) !important;
+  color: var(--simov-text) !important;
+  text-decoration: none !important;
+  font-size: 13px;
+  border: 1px solid var(--simov-border-strong);
+}
+
+ul.menu_faixa a:hover {
+  background: var(--simov-primary) !important;
+  color: var(--simov-primary-contrast) !important;
+  border-color: var(--simov-primary);
+}
+
+table.fontSize {
+  opacity: 0.8;
+}
+
+table.fontSize a {
+  color: var(--simov-text-muted) !important;
+  padding: 0 4px;
+}
+
+/* "#link_pesquisa" e as classes "search_box"/"search_box_up" sao nativas do
+   site (alternadas via ComuteLink() ao abrir/fechar a pesquisa nativa) -
+   provavelmente a origem da seta/recorte decorativo que aparecia entre as
+   abas Pesquisa/Cadastro. Neutraliza junto com o resto de ".faixa". */
+#conteudo #link_pesquisa,
+#conteudo .search_box,
+#conteudo .search_box_up {
+  background: none !important;
+  background-image: none !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Painel de pesquisa                                                      */
+/* ---------------------------------------------------------------------- */
+
+/* Cabecalho clicavel injetado pela extensao, para recolher a pesquisa e
+   sobrar mais altura de tela para a grid de resultados. */
+.simov-ext-search-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  background: var(--simov-row-alt);
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+  color: var(--simov-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.simov-ext-search-toggle:hover {
+  color: var(--simov-primary) !important;
+}
+
+.simov-ext-chevron {
+  transition: transform 0.1s ease;
+}
+
+.simov-ext-search-toggle.simov-ext-collapsed-state .simov-ext-chevron {
+  transform: rotate(-90deg);
+}
+
+.search {
+  background: var(--simov-surface) !important;
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+  padding: 12px !important;
+  margin-bottom: 10px;
+}
+
+.search.simov-ext-search-hidden {
+  display: none !important;
+}
+
+.form_items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px 12px;
+  align-items: end;
+}
+
+.form_group,
+.last_form_group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 !important;
+  min-width: 0;
+}
+
+.form_group fieldset,
+.last_form_group fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.form_group h5,
+.last_form_group h5 {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--simov-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.last_form_group {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+  margin-top: 2px !important;
+}
+
+/* Campos com um botao de calendario logo apos o texto (Data Inicio/Termino):
+   sem isso, o fieldset em coluna empilha rotulo, campo e icone cada um numa
+   linha, jogando o icone quebrado para "fora" do campo visualmente. */
+.form_group fieldset:has(input[type="image"]),
+.last_form_group fieldset:has(input[type="image"]) {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.form_group fieldset:has(input[type="image"]) > h5,
+.last_form_group fieldset:has(input[type="image"]) > h5 {
+  flex-basis: 100%;
+}
+
+.form_group fieldset:has(input[type="image"]) > input.textbox,
+.last_form_group fieldset:has(input[type="image"]) > input.textbox {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 60px;
+}
+
+.form_group fieldset:has(input[type="image"]) > input[type="image"],
+.last_form_group fieldset:has(input[type="image"]) > input[type="image"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+/* Rede de seguranca: qualquer campo de texto/select/textarea dentro do
+   conteudo, mesmo fora do painel ".search" (outros modulos podem usar um
+   contenedor com nome diferente) - sem isso, campos que nao batem com o
+   seletor ".search select" etc. ficam com o fundo branco padrao do
+   navegador no tema escuro. */
+#conteudo input[type="text"],
+#conteudo input[type="password"],
+#conteudo select,
+#conteudo textarea {
+  background: var(--simov-bg) !important;
+  color: var(--simov-text) !important;
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+}
+
+input.textbox,
+.search select,
+.search textarea {
+  background: var(--simov-bg) !important;
+  color: var(--simov-text) !important;
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+  padding: 4px 7px;
+  font-size: 12.5px;
+  min-height: 26px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+input.textbox:focus,
+.search select:focus,
+.search textarea:focus {
+  outline: none;
+  border-color: var(--simov-primary);
+  box-shadow: 0 0 0 3px rgba(28, 110, 92, 0.15);
+}
+
+html.simov-dark-mode input.textbox {
+  font-family: var(--simov-mono);
+}
+
+html.simov-dark-mode input.textbox:focus,
+html.simov-dark-mode .search select:focus,
+html.simov-dark-mode .search textarea:focus {
+  box-shadow: 0 0 0 3px rgba(53, 255, 132, 0.18);
+}
+
+.simov-ext-select-search {
+  margin-bottom: 2px;
+}
+
+.simov-ext-select-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--simov-bg);
+  color: var(--simov-text);
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius) var(--simov-radius) 0 0;
+  border-bottom: none;
+  padding: 4px 7px;
+  font-size: 11.5px;
+}
+
+.simov-ext-select-search-input:focus {
+  outline: none;
+  border-color: var(--simov-primary);
+}
+
+.simov-ext-select-search + select {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Botoes                                                                   */
+/* ---------------------------------------------------------------------- */
+
+input.button,
+input[type="submit"].button {
+  background: var(--simov-primary) !important;
+  color: var(--simov-primary-contrast) !important;
+  border: 1px solid var(--simov-primary) !important;
+  border-radius: var(--simov-radius);
+  padding: 5px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+input.button:hover {
+  background: var(--simov-primary-hover) !important;
+  border-color: var(--simov-primary-hover) !important;
+}
+
+input.button_cancel {
+  background: transparent !important;
+  color: var(--simov-text) !important;
+  border: 1px solid var(--simov-border-strong) !important;
+}
+
+input.button_cancel:hover {
+  background: var(--simov-row-hover) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Barra "resultados / novo / imprimir"                                    */
+/* ---------------------------------------------------------------------- */
+
+.identifica_acao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px;
+  margin-bottom: 4px;
+  font-size: 12.5px;
+  color: var(--simov-text-muted) !important;
+}
+
+.identifica_acao .right {
+  display: flex;
+  gap: 14px;
+}
+
+.identifica_acao a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--simov-primary) !important;
+  text-decoration: none !important;
+  font-weight: 600;
+}
+
+.identifica_acao a:hover {
+  text-decoration: underline !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Grid de resultados                                                       */
+/* ---------------------------------------------------------------------- */
+
+table.gridview {
+  border: 1px solid var(--simov-border-strong) !important;
+  font-size: 12.5px;
+}
+
+/* Cabecalho fixo ao rolar: em listas longas continua dando pra ler as
+   colunas sem precisar voltar ao topo - importante pra comparar varias
+   linhas de uma vez. Borda inferior mais forte pra separar claramente do
+   corpo da tabela, ja que o fundo sozinho nao basta pra isso no tema escuro. */
+table.gridview tr.headerstyle th,
+table.gridview tr.headerstyle td {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--simov-row-alt) !important;
+  color: var(--simov-text-muted) !important;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  padding: 7px 10px !important;
+  border-bottom: 2px solid var(--simov-border-strong) !important;
+  text-align: left;
+}
+
+table.gridview tr.headerstyle a {
+  color: var(--simov-text-muted) !important;
+  text-decoration: none !important;
+}
+
+table.gridview tr.headerstyle a:hover {
+  color: var(--simov-primary) !important;
+}
+
+table.gridview tr.itemstyle td,
+table.gridview tr.alternateitemstyle td {
+  padding: 5px 10px !important;
+  border-bottom: 1px solid var(--simov-border) !important;
+  background: var(--simov-surface) !important;
+  color: var(--simov-text) !important;
+  vertical-align: middle;
+}
+
+html.simov-dark-mode table.gridview tr.itemstyle td,
+html.simov-dark-mode table.gridview tr.alternateitemstyle td {
+  font-family: var(--simov-mono);
+  font-size: 12px;
+}
+
+table.gridview tr.alternateitemstyle td {
+  background: var(--simov-row-alt) !important;
+}
+
+table.gridview tr.itemstyle:hover td,
+table.gridview tr.alternateitemstyle:hover td {
+  background: var(--simov-row-hover) !important;
+}
+
+table.gridview tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* Rede de seguranca: qualquer linha da grid que nao seja cabecalho/item/
+   item-alternado (candidato mais provavel: uma linha de paginacao do
+   GridView, que nao apareceu na pagina de exemplo que capturamos porque so
+   tinha 4 resultados = 1 pagina so). Sem isso ela mantem o fundo claro
+   nativo do navegador/site. */
+table.gridview tr:not(.headerstyle):not(.itemstyle):not(.alternateitemstyle),
+table.gridview tr:not(.headerstyle):not(.itemstyle):not(.alternateitemstyle) td,
+table.gridview tr:not(.headerstyle):not(.itemstyle):not(.alternateitemstyle) th {
+  background: var(--simov-surface) !important;
+  color: var(--simov-text) !important;
+  border-top: 1px solid var(--simov-border-strong) !important;
+}
+
+table.gridview tr:not(.headerstyle):not(.itemstyle):not(.alternateitemstyle) a {
+  color: var(--simov-primary) !important;
+}
+
+table.gridview input[type="image"] {
+  padding: 4px;
+  border-radius: var(--simov-radius);
+  transition: background-color 0.1s ease;
+  vertical-align: middle;
+}
+
+table.gridview input[type="image"]:not(.buttonOpacity):hover {
+  background-color: var(--simov-row-hover) !important;
+}
+
+table.gridview input[type="image"].buttonOpacity {
+  opacity: 0.32;
+  cursor: default;
+}
+
+/* So um realce/brilho, sem inverter cor: mantem o significado (vermelho =
+   excluir/cancelar, verde = adicionar) legivel contra o fundo escuro. */
+html.simov-dark-mode table.gridview img,
+html.simov-dark-mode table.gridview input[type="image"] {
+  filter: brightness(1.6) drop-shadow(0 0 2px rgba(53, 255, 132, 0.25));
+}
+
+/* ---------------------------------------------------------------------- */
+/* Modal (Ajax ModalPopupExtender)                                         */
+/* ---------------------------------------------------------------------- */
+
+.modal_item {
+  background: var(--simov-surface) !important;
+  color: var(--simov-text) !important;
+  border-radius: var(--simov-radius-lg);
+  box-shadow: var(--simov-shadow-lg);
+  padding: 16px !important;
+  border: 1px solid var(--simov-border);
+}
+
+.overlay {
+  background: rgba(10, 14, 18, 0.55) !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Calendario (AjaxControlToolkit CalendarExtender - Sys.Extended.UI.      */
+/* CalendarBehavior, usado nos campos Data Inicio/Termino). E' um widget   */
+/* flutuante com CSS proprio, nomes de classe padrao dessa biblioteca -    */
+/* sem isso ele abre em branco/claro por cima do tema escuro.              */
+/* ---------------------------------------------------------------------- */
+
+html.simov-dark-mode .ajax__calendar_container {
+  background: var(--simov-surface) !important;
+  border: 1px solid var(--simov-border-strong) !important;
+  color: var(--simov-text) !important;
+  box-shadow: var(--simov-shadow-lg);
+}
+
+html.simov-dark-mode .ajax__calendar {
+  background: var(--simov-surface) !important;
+  color: var(--simov-text) !important;
+}
+
+html.simov-dark-mode .ajax__calendar_header,
+html.simov-dark-mode .ajax__calendar_title,
+html.simov-dark-mode .ajax__calendar_next,
+html.simov-dark-mode .ajax__calendar_prev,
+html.simov-dark-mode .ajax__calendar_dayname {
+  background: var(--simov-row-alt) !important;
+  color: var(--simov-text-muted) !important;
+  border-color: var(--simov-border) !important;
+}
+
+html.simov-dark-mode .ajax__calendar_day,
+html.simov-dark-mode .ajax__calendar_month,
+html.simov-dark-mode .ajax__calendar_year {
+  background: var(--simov-surface) !important;
+  color: var(--simov-text) !important;
+}
+
+html.simov-dark-mode .ajax__calendar_hover .ajax__calendar_day,
+html.simov-dark-mode .ajax__calendar_hover .ajax__calendar_month,
+html.simov-dark-mode .ajax__calendar_hover .ajax__calendar_year,
+html.simov-dark-mode .ajax__calendar_active {
+  background: var(--simov-row-hover) !important;
+  color: var(--simov-primary) !important;
+}
+
+html.simov-dark-mode .ajax__calendar_today {
+  color: var(--simov-primary) !important;
+  font-weight: 700;
+}
+
+html.simov-dark-mode .ajax__calendar_other,
+html.simov-dark-mode .ajax__calendar_disabled {
+  color: var(--simov-text-muted) !important;
+  opacity: 0.5;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Elementos flutuantes injetados pela extensao                            */
+/* ---------------------------------------------------------------------- */
+
+.simov-ext-fab-bar {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simov-ext-fab {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--simov-border);
+  background: var(--simov-surface);
+  color: var(--simov-text);
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: var(--simov-shadow);
+}
+
+.simov-ext-fab:hover {
+  background: var(--simov-row-hover) !important;
+  color: var(--simov-primary) !important;
+}
+
+/* Busca rapida por codigo + historico, flutuando acima do botao de tema. */
+.simov-ext-quick-search {
+  position: fixed;
+  right: 18px;
+  bottom: 62px;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.simov-ext-quick-search-row {
+  display: flex;
+  gap: 4px;
+}
+
+.simov-ext-quick-search-input {
+  width: 120px;
+  box-sizing: border-box;
+  background: var(--simov-surface);
+  color: var(--simov-text);
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+  padding: 6px 8px;
+  font-size: 12px;
+  box-shadow: var(--simov-shadow);
+}
+
+.simov-ext-quick-search-input:focus {
+  outline: none;
+  border-color: var(--simov-primary);
+}
+
+.simov-ext-quick-search-btn {
+  width: 30px;
+  border: 1px solid var(--simov-primary);
+  border-radius: var(--simov-radius);
+  background: var(--simov-primary);
+  color: var(--simov-primary-contrast);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--simov-shadow);
+}
+
+.simov-ext-quick-search-btn:hover {
+  background: var(--simov-primary-hover);
+  border-color: var(--simov-primary-hover);
+}
+
+.simov-ext-recent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  max-width: 220px;
+}
+
+.simov-ext-recent-chip {
+  border: 1px solid var(--simov-border-strong);
+  border-radius: 999px;
+  background: var(--simov-surface);
+  color: var(--simov-text-muted);
+  font-size: 10.5px;
+  padding: 2px 8px;
+  cursor: pointer;
+  box-shadow: var(--simov-shadow);
+}
+
+.simov-ext-recent-chip:hover {
+  color: var(--simov-primary) !important;
+  border-color: var(--simov-primary) !important;
+}
+
+/* Botao de copiar linha, no inicio da primeira celula de cada linha da grid. */
+.simov-ext-row-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--simov-text-muted);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.simov-ext-row-copy:hover {
+  color: var(--simov-primary) !important;
+  background: var(--simov-row-hover) !important;
+}
+
+.simov-ext-row-copy-done {
+  color: var(--simov-primary) !important;
+}

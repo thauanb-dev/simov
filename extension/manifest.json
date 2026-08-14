@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "SIMOV WEB - UI Melhorada",
+  "version": "1.0.0",
+  "description": "Melhora a interface do SIMOV WEB (simovweb.ba.gov.br): tipografia e espaçamento mais legíveis, grid com zebra e hover, formulário de pesquisa organizado, filtro de texto nos combos grandes (município etc.), menu lateral recolhível e tema escuro opcional.",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://simovweb.ba.gov.br/*",
+        "https://simovweb.ba.gov.br/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "http://simovweb.ba.gov.br/*",
+        "https://simovweb.ba.gov.br/*"
+      ],
+      "css": ["content.css"],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ]
+}
