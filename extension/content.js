@@ -259,39 +259,22 @@
 
   // So faz sentido em paginas de listagem/pesquisa que tem um campo
   // "Codigo" reconhecivel; paginas de cadastro/edicao nao ganham o atalho.
-  // Fica como um botao no "#topo" que abre um menu suspenso ancorado no
-  // canto direito (nao um box fixo grudado no rodape, que competia com o
-  // botao de tema escuro e ficava longe da mao).
+  // O painel fica sempre presente, grudado na borda direita, controlado so
+  // pela propria alca de colapsar/expandir (sem um botao separado no
+  // "#topo" - um controle a mais pra fazer a mesma coisa era redundante).
+  // Comeca recolhido (so a alca visivel) pra nao atrapalhar por padrao.
   function setupQuickCodeSearch() {
-    if (document.getElementById('simov-ext-quick-search-toggle')) return;
+    if (document.getElementById('simov-ext-quick-search-panel')) return;
     if (!document.body) return;
     if (!findSearchFieldByLabel('codigo')) return;
-
-    var topo = document.getElementById('topo');
-
-    var toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.id = 'simov-ext-quick-search-toggle';
-    toggle.className = 'simov-ext-menu-toggle simov-ext-menu-toggle-inline';
-    toggle.title = 'Busca rapida por codigo';
-    toggle.setAttribute('aria-label', 'Busca rapida por codigo');
-    toggle.textContent = '🔎';
-
-    if (topo) {
-      topo.appendChild(toggle);
-    } else {
-      toggle.classList.add('simov-ext-menu-toggle-floating');
-      document.body.appendChild(toggle);
-    }
 
     var panel = document.createElement('div');
     panel.id = 'simov-ext-quick-search-panel';
     panel.className = 'simov-ext-quick-search-panel';
-    panel.hidden = true;
 
-    // Alca de colapsar/expandir o painel inteiro pro lado direito: em vez
-    // de fechar (o que perde o foco do campo/estado do menu), encolhe pra
-    // uma tira fina grudada na borda direita, deixando so a alca visivel.
+    // Alca de colapsar/expandir o painel inteiro pro lado direito: encolhe
+    // pra uma tira fina grudada na borda direita, deixando so a alca
+    // visivel - e tambem o unico jeito de abrir/fechar o painel.
     var collapseHandle = document.createElement('button');
     collapseHandle.type = 'button';
     collapseHandle.className = 'simov-ext-quick-search-collapse';
@@ -377,7 +360,10 @@
     panel.appendChild(body);
     document.body.appendChild(panel);
 
-    var panelCollapsed = localStorage.getItem(STORAGE_KEYS.quickSearchPanelCollapsed) === '1';
+    // Sem preferencia salva ainda, comeca recolhido (nao existe mais botao
+    // no "#topo" pra abrir, entao o padrao precisa ser discreto).
+    var storedCollapsed = localStorage.getItem(STORAGE_KEYS.quickSearchPanelCollapsed);
+    var panelCollapsed = storedCollapsed === null ? true : storedCollapsed === '1';
     panel.classList.toggle('simov-ext-panel-collapsed', panelCollapsed);
     collapseHandle.textContent = panelCollapsed ? '◂' : '▸';
 
@@ -440,15 +426,10 @@
       renderList();
     });
 
-    function openPanel() {
-      panel.hidden = false;
-      toggle.classList.add('simov-ext-active');
-      input.focus();
-    }
-
-    function closePanel() {
-      panel.hidden = true;
-      toggle.classList.remove('simov-ext-active');
+    function collapsePanel() {
+      panel.classList.add('simov-ext-panel-collapsed');
+      collapseHandle.textContent = '◂';
+      localStorage.setItem(STORAGE_KEYS.quickSearchPanelCollapsed, '1');
     }
 
     function runSearch() {
@@ -467,22 +448,8 @@
       field.value = value;
       addRecentSearch(value);
       renderList();
-      closePanel();
       submitBtn.click();
     }
-
-    toggle.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      if (panel.hidden) openPanel(); else closePanel();
-    });
-
-    panel.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-    });
-
-    document.addEventListener('click', function () {
-      closePanel();
-    });
 
     input.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') {
@@ -490,7 +457,7 @@
         runSearch();
       }
       if (ev.key === 'Escape') {
-        closePanel();
+        collapsePanel();
       }
     });
     goBtn.addEventListener('click', runSearch);

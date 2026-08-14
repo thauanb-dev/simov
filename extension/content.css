@@ -1100,11 +1100,6 @@ html.simov-dark-mode .ajax__calendar_disabled {
   color: var(--simov-danger) !important;
 }
 
-.simov-ext-menu-toggle.simov-ext-active {
-  background: var(--simov-row-hover) !important;
-  color: var(--simov-primary) !important;
-}
-
 /* Botao de copiar linha, no inicio da primeira celula de cada linha da grid. */
 .simov-ext-row-copy {
   display: inline-flex;
