@@ -35,7 +35,9 @@
     dark: 'simov-ext-dark-mode',
     collapsed: 'simov-ext-menu-collapsed',
     searchCollapsed: 'simov-ext-search-collapsed',
-    recentSearches: 'simov-ext-recent-searches'
+    recentSearches: 'simov-ext-recent-searches',
+    recentListCollapsed: 'simov-ext-recent-list-collapsed',
+    quickSearchPanelCollapsed: 'simov-ext-quick-search-panel-collapsed'
   };
 
   var MIN_OPTIONS_TO_ENHANCE = 12;
@@ -242,16 +244,63 @@
     }
   }
 
+  function removeRecentSearch(code) {
+    var list = getRecentSearches().filter(function (c) { return c !== code; });
+    try {
+      localStorage.setItem(STORAGE_KEYS.recentSearches, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function clearRecentSearches() {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.recentSearches);
+    } catch (e) {}
+  }
+
   // So faz sentido em paginas de listagem/pesquisa que tem um campo
   // "Codigo" reconhecivel; paginas de cadastro/edicao nao ganham o atalho.
+  // Fica como um botao no "#topo" que abre um menu suspenso ancorado no
+  // canto direito (nao um box fixo grudado no rodape, que competia com o
+  // botao de tema escuro e ficava longe da mao).
   function setupQuickCodeSearch() {
-    if (document.getElementById('simov-ext-quick-search')) return;
+    if (document.getElementById('simov-ext-quick-search-toggle')) return;
     if (!document.body) return;
     if (!findSearchFieldByLabel('codigo')) return;
 
-    var wrap = document.createElement('div');
-    wrap.id = 'simov-ext-quick-search';
-    wrap.className = 'simov-ext-quick-search';
+    var topo = document.getElementById('topo');
+
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.id = 'simov-ext-quick-search-toggle';
+    toggle.className = 'simov-ext-menu-toggle simov-ext-menu-toggle-inline';
+    toggle.title = 'Busca rapida por codigo';
+    toggle.setAttribute('aria-label', 'Busca rapida por codigo');
+    toggle.textContent = '🔎';
+
+    if (topo) {
+      topo.appendChild(toggle);
+    } else {
+      toggle.classList.add('simov-ext-menu-toggle-floating');
+      document.body.appendChild(toggle);
+    }
+
+    var panel = document.createElement('div');
+    panel.id = 'simov-ext-quick-search-panel';
+    panel.className = 'simov-ext-quick-search-panel';
+    panel.hidden = true;
+
+    // Alca de colapsar/expandir o painel inteiro pro lado direito: em vez
+    // de fechar (o que perde o foco do campo/estado do menu), encolhe pra
+    // uma tira fina grudada na borda direita, deixando so a alca visivel.
+    var collapseHandle = document.createElement('button');
+    collapseHandle.type = 'button';
+    collapseHandle.className = 'simov-ext-quick-search-collapse';
+    collapseHandle.title = 'Colapsar/expandir pro lado direito';
+    collapseHandle.setAttribute('aria-label', 'Colapsar ou expandir o painel');
+    collapseHandle.textContent = '▸';
+
+    var body = document.createElement('div');
+    body.className = 'simov-ext-quick-search-body';
 
     var row = document.createElement('div');
     row.className = 'simov-ext-quick-search-row';
@@ -261,40 +310,145 @@
     input.placeholder = 'Codigo...';
     input.className = 'simov-ext-quick-search-input';
     input.autocomplete = 'off';
-    input.title = 'Pesquisar direto por codigo (Enter)';
+    input.inputMode = 'numeric';
+    input.setAttribute('pattern', '[0-9]*');
 
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'simov-ext-quick-search-btn';
-    btn.textContent = '↵';
-    btn.title = 'Pesquisar';
+    // Codigo de imovel e sempre numerico - barra letras/nomes direto no
+    // campo em vez de deixar digitar e so falhar na busca depois.
+    input.addEventListener('input', function () {
+      var digitsOnly = input.value.replace(/\D+/g, '');
+      if (digitsOnly !== input.value) input.value = digitsOnly;
+    });
+
+    var goBtn = document.createElement('button');
+    goBtn.type = 'button';
+    goBtn.className = 'simov-ext-quick-search-btn';
+    goBtn.textContent = '↵';
+    goBtn.title = 'Pesquisar';
 
     row.appendChild(input);
-    row.appendChild(btn);
+    row.appendChild(goBtn);
 
-    var chips = document.createElement('div');
-    chips.className = 'simov-ext-recent-chips';
+    // Cabecalho "Recentes" clicavel: colapsa/expande so a lista, sem fechar
+    // o menu inteiro nem mexer no campo de busca. Estado salvo.
+    var listHeader = document.createElement('div');
+    listHeader.className = 'simov-ext-recent-header';
 
-    wrap.appendChild(row);
-    wrap.appendChild(chips);
-    document.body.appendChild(wrap);
+    var listToggle = document.createElement('button');
+    listToggle.type = 'button';
+    listToggle.className = 'simov-ext-recent-toggle';
 
-    function renderChips() {
-      chips.innerHTML = '';
-      var list = getRecentSearches();
-      chips.hidden = list.length === 0;
-      list.forEach(function (code) {
-        var chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'simov-ext-recent-chip';
-        chip.textContent = code;
-        chip.title = 'Pesquisar codigo ' + code;
-        chip.addEventListener('click', function () {
+    var listTitle = document.createElement('span');
+    listTitle.textContent = 'Recentes';
+
+    var listChevron = document.createElement('span');
+    listChevron.className = 'simov-ext-chevron';
+    listChevron.textContent = '▾';
+
+    listToggle.appendChild(listTitle);
+    listToggle.appendChild(listChevron);
+
+    var clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'simov-ext-recent-clear';
+    clearBtn.textContent = 'Limpar';
+
+    listHeader.appendChild(listToggle);
+    listHeader.appendChild(clearBtn);
+
+    var list = document.createElement('div');
+    list.className = 'simov-ext-recent-list';
+
+    var listCollapsed = localStorage.getItem(STORAGE_KEYS.recentListCollapsed) === '1';
+    list.classList.toggle('simov-ext-recent-list-hidden', listCollapsed);
+    listToggle.classList.toggle('simov-ext-collapsed-state', listCollapsed);
+
+    listToggle.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var isCollapsed = list.classList.toggle('simov-ext-recent-list-hidden');
+      listToggle.classList.toggle('simov-ext-collapsed-state', isCollapsed);
+      localStorage.setItem(STORAGE_KEYS.recentListCollapsed, isCollapsed ? '1' : '0');
+    });
+
+    body.appendChild(row);
+    body.appendChild(listHeader);
+    body.appendChild(list);
+    panel.appendChild(collapseHandle);
+    panel.appendChild(body);
+    document.body.appendChild(panel);
+
+    var panelCollapsed = localStorage.getItem(STORAGE_KEYS.quickSearchPanelCollapsed) === '1';
+    panel.classList.toggle('simov-ext-panel-collapsed', panelCollapsed);
+    collapseHandle.textContent = panelCollapsed ? '◂' : '▸';
+
+    collapseHandle.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var isCollapsed = panel.classList.toggle('simov-ext-panel-collapsed');
+      collapseHandle.textContent = isCollapsed ? '◂' : '▸';
+      localStorage.setItem(STORAGE_KEYS.quickSearchPanelCollapsed, isCollapsed ? '1' : '0');
+      if (!isCollapsed) input.focus();
+    });
+
+    function renderList() {
+      list.innerHTML = '';
+      var codes = getRecentSearches();
+
+      if (!codes.length) {
+        listHeader.hidden = true;
+        var empty = document.createElement('div');
+        empty.className = 'simov-ext-recent-empty';
+        empty.textContent = 'Nenhuma busca recente';
+        list.appendChild(empty);
+        return;
+      }
+
+      listHeader.hidden = false;
+      codes.forEach(function (code) {
+        var item = document.createElement('div');
+        item.className = 'simov-ext-recent-item';
+
+        var codeBtn = document.createElement('button');
+        codeBtn.type = 'button';
+        codeBtn.className = 'simov-ext-recent-item-code';
+        codeBtn.textContent = code;
+        codeBtn.title = 'Pesquisar codigo ' + code;
+        codeBtn.addEventListener('click', function () {
           input.value = code;
           runSearch();
         });
-        chips.appendChild(chip);
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'simov-ext-recent-item-remove';
+        removeBtn.title = 'Remover dos recentes';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          removeRecentSearch(code);
+          renderList();
+        });
+
+        item.appendChild(codeBtn);
+        item.appendChild(removeBtn);
+        list.appendChild(item);
       });
+    }
+
+    clearBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      clearRecentSearches();
+      renderList();
+    });
+
+    function openPanel() {
+      panel.hidden = false;
+      toggle.classList.add('simov-ext-active');
+      input.focus();
+    }
+
+    function closePanel() {
+      panel.hidden = true;
+      toggle.classList.remove('simov-ext-active');
     }
 
     function runSearch() {
@@ -305,26 +459,43 @@
       var submitBtn = findSearchSubmitButton();
       if (!field || !submitBtn) return;
 
-      var panel = document.querySelector('.search');
-      if (panel) panel.classList.remove('simov-ext-search-hidden');
-      var toggle = document.querySelector('.simov-ext-search-toggle');
-      if (toggle) toggle.classList.remove('simov-ext-collapsed-state');
+      var searchPanel = document.querySelector('.search');
+      if (searchPanel) searchPanel.classList.remove('simov-ext-search-hidden');
+      var searchToggle = document.querySelector('.simov-ext-search-toggle');
+      if (searchToggle) searchToggle.classList.remove('simov-ext-collapsed-state');
 
       field.value = value;
       addRecentSearch(value);
-      renderChips();
+      renderList();
+      closePanel();
       submitBtn.click();
     }
+
+    toggle.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (panel.hidden) openPanel(); else closePanel();
+    });
+
+    panel.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+    });
+
+    document.addEventListener('click', function () {
+      closePanel();
+    });
 
     input.addEventListener('keydown', function (ev) {
       if (ev.key === 'Enter') {
         ev.preventDefault();
         runSearch();
       }
+      if (ev.key === 'Escape') {
+        closePanel();
+      }
     });
-    btn.addEventListener('click', runSearch);
+    goBtn.addEventListener('click', runSearch);
 
-    renderChips();
+    renderList();
   }
 
   // ---- Copiar linha da grid como texto ----

@@ -461,7 +461,8 @@ table.fontSize a {
   transition: transform 0.1s ease;
 }
 
-.simov-ext-search-toggle.simov-ext-collapsed-state .simov-ext-chevron {
+.simov-ext-search-toggle.simov-ext-collapsed-state .simov-ext-chevron,
+.simov-ext-recent-toggle.simov-ext-collapsed-state .simov-ext-chevron {
   transform: rotate(-90deg);
 }
 
@@ -896,16 +897,65 @@ html.simov-dark-mode .ajax__calendar_disabled {
   color: var(--simov-primary) !important;
 }
 
-/* Busca rapida por codigo + historico, flutuando acima do botao de tema. */
-.simov-ext-quick-search {
+/* Busca rapida por codigo: botao no "#topo" (mesmo estilo do botao de
+   recolher menu) que abre um menu suspenso ancorado no canto superior
+   direito - nao um box fixo no rodape competindo com o botao de tema. */
+.simov-ext-quick-search-panel {
   position: fixed;
+  top: 45px;
   right: 18px;
-  bottom: 62px;
   z-index: 2147483000;
+  width: 230px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  background: var(--simov-surface);
+  border: 1px solid var(--simov-border-strong);
+  border-radius: var(--simov-radius);
+  box-shadow: var(--simov-shadow-lg);
+  overflow: hidden;
+  transition: width 0.15s ease;
+}
+
+/* Alca no topo do painel: colapsa/expande o painel inteiro encolhendo pra
+   uma tira fina grudada na borda direita, em vez de fechar por completo. */
+.simov-ext-quick-search-collapse {
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: right;
+  border: none;
+  background: none;
+  color: var(--simov-text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.simov-ext-quick-search-collapse:hover {
+  color: var(--simov-primary);
+}
+
+.simov-ext-quick-search-body {
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.simov-ext-quick-search-panel.simov-ext-panel-collapsed {
+  width: 28px;
+}
+
+.simov-ext-quick-search-panel.simov-ext-panel-collapsed .simov-ext-quick-search-body {
+  display: none;
+}
+
+.simov-ext-quick-search-panel.simov-ext-panel-collapsed .simov-ext-quick-search-collapse {
+  text-align: center;
 }
 
 .simov-ext-quick-search-row {
@@ -914,15 +964,15 @@ html.simov-dark-mode .ajax__calendar_disabled {
 }
 
 .simov-ext-quick-search-input {
-  width: 120px;
+  flex: 1 1 auto;
+  min-width: 0;
   box-sizing: border-box;
-  background: var(--simov-surface);
+  background: var(--simov-bg);
   color: var(--simov-text);
   border: 1px solid var(--simov-border-strong);
   border-radius: var(--simov-radius);
   padding: 6px 8px;
   font-size: 12px;
-  box-shadow: var(--simov-shadow);
 }
 
 .simov-ext-quick-search-input:focus {
@@ -931,6 +981,7 @@ html.simov-dark-mode .ajax__calendar_disabled {
 }
 
 .simov-ext-quick-search-btn {
+  flex: 0 0 auto;
   width: 30px;
   border: 1px solid var(--simov-primary);
   border-radius: var(--simov-radius);
@@ -938,7 +989,6 @@ html.simov-dark-mode .ajax__calendar_disabled {
   color: var(--simov-primary-contrast);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: var(--simov-shadow);
 }
 
 .simov-ext-quick-search-btn:hover {
@@ -946,28 +996,113 @@ html.simov-dark-mode .ajax__calendar_disabled {
   border-color: var(--simov-primary-hover);
 }
 
-.simov-ext-recent-chips {
+.simov-ext-recent-header {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--simov-border);
+  padding-top: 8px;
+}
+
+.simov-ext-recent-toggle {
+  display: flex;
+  align-items: center;
   gap: 4px;
-  max-width: 220px;
-}
-
-.simov-ext-recent-chip {
-  border: 1px solid var(--simov-border-strong);
-  border-radius: 999px;
-  background: var(--simov-surface);
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--simov-text-muted);
-  font-size: 10.5px;
-  padding: 2px 8px;
   cursor: pointer;
-  box-shadow: var(--simov-shadow);
 }
 
-.simov-ext-recent-chip:hover {
+.simov-ext-recent-toggle:hover {
   color: var(--simov-primary) !important;
-  border-color: var(--simov-primary) !important;
+}
+
+.simov-ext-recent-clear {
+  border: none;
+  background: none;
+  color: var(--simov-text-muted);
+  font-size: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.simov-ext-recent-clear:hover {
+  color: var(--simov-danger) !important;
+}
+
+.simov-ext-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.simov-ext-recent-list.simov-ext-recent-list-hidden {
+  display: none;
+}
+
+.simov-ext-recent-empty {
+  font-size: 11px;
+  color: var(--simov-text-muted);
+  padding: 4px 0;
+}
+
+.simov-ext-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--simov-radius);
+}
+
+.simov-ext-recent-item:hover {
+  background: var(--simov-row-hover);
+}
+
+.simov-ext-recent-item-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--simov-text);
+  font-size: 12px;
+  font-family: var(--simov-mono, inherit);
+  padding: 5px 6px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simov-ext-recent-item-code:hover {
+  color: var(--simov-primary) !important;
+}
+
+.simov-ext-recent-item-remove {
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  color: var(--simov-text-muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.simov-ext-recent-item-remove:hover {
+  color: var(--simov-danger) !important;
+}
+
+.simov-ext-menu-toggle.simov-ext-active {
+  background: var(--simov-row-hover) !important;
+  color: var(--simov-primary) !important;
 }
 
 /* Botao de copiar linha, no inicio da primeira celula de cada linha da grid. */
