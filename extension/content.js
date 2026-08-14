@@ -37,7 +37,9 @@
     searchCollapsed: 'simov-ext-search-collapsed',
     recentSearches: 'simov-ext-recent-searches',
     recentListCollapsed: 'simov-ext-recent-list-collapsed',
-    quickSearchPanelCollapsed: 'simov-ext-quick-search-panel-collapsed'
+    quickSearchPanelCollapsed: 'simov-ext-quick-search-panel-collapsed',
+    gridSortPrefix: 'simov-ext-grid-sort:',
+    selectedRows: 'simov-ext-selected-rows'
   };
 
   var MIN_OPTIONS_TO_ENHANCE = 12;
@@ -465,7 +467,17 @@
     renderList();
   }
 
-  // ---- Copiar linha da grid como texto ----
+  // ---- Helpers de leitura da grid (compartilhados por copiar/filtrar/selecionar) ----
+  // O texto de uma celula precisa excluir os proprios controles que a
+  // extensao injeta nela (botao de copiar, checkbox de selecao), senao
+  // "⧉7903" vira o valor "copiado" ou o "texto" usado pra filtrar/comparar.
+  function getCellText(td) {
+    var clone = td.cloneNode(true);
+    var junk = clone.querySelectorAll('.simov-ext-row-copy, .simov-ext-row-select');
+    Array.prototype.forEach.call(junk, function (el) { el.remove(); });
+    return clone.textContent.replace(/\s+/g, ' ').trim();
+  }
+
   function getGridHeaders(table) {
     var headerRow = table.querySelector('tr.headerstyle');
     if (!headerRow) return [];
@@ -475,12 +487,26 @@
     });
   }
 
+  // Junta o texto das celulas de dados (sem as de acao/icones) - usado tanto
+  // pra "impressao digital" da linha (selecao persistida) quanto pro filtro
+  // rapido no cliente.
+  function getRowDataText(row) {
+    var cells = row.querySelectorAll('td');
+    var parts = [];
+    Array.prototype.forEach.call(cells, function (td) {
+      if (td.querySelector('input[type="image"]')) return;
+      var value = getCellText(td);
+      if (value) parts.push(value);
+    });
+    return parts.join(' | ');
+  }
+
   function rowToText(row, headers) {
     var cells = row.querySelectorAll('td');
     var parts = [];
     Array.prototype.forEach.call(cells, function (td, index) {
       if (td.querySelector('input[type="image"]')) return; // celula de acao (icones), ignora
-      var value = td.textContent.replace(/\s+/g, ' ').trim();
+      var value = getCellText(td);
       if (!value) return;
       var label = headers[index];
       parts.push(label ? label + ': ' + value : value);
@@ -560,6 +586,272 @@
     });
   }
 
+  // ---- Indicador visual de ordenacao ----
+  // O SIMOV ja ordena de verdade via postback ao clicar no cabecalho
+  // (__doPostBack(...,'Sort$Campo')) - a extensao nao mexe nisso, so marca
+  // qual coluna foi clicada por ultimo, pra ficar visivel qual e a ordenacao
+  // ativa (o site nativo nao mostra nenhuma pista disso). Nao afirma a
+  // direcao (asc/desc) porque nao ha como confirmar isso so pelo HTML.
+  function setupGridSortIndicator(table) {
+    var headerRow = table.querySelector('tr.headerstyle');
+    if (!headerRow) return;
+
+    var links = headerRow.querySelectorAll('a[href*="Sort$"]');
+    if (!links.length) return;
+
+    var storageKey = STORAGE_KEYS.gridSortPrefix + (table.id || 'default');
+    var activeSortKey = null;
+    try {
+      activeSortKey = localStorage.getItem(storageKey);
+    } catch (e) {}
+
+    Array.prototype.forEach.call(links, function (a) {
+      var match = /Sort\$([A-Za-z0-9_]+)/.exec(a.getAttribute('href') || '');
+      var sortKey = match ? match[1] : null;
+      if (!sortKey) return;
+
+      var cell = a.closest('th, td');
+      if (cell && sortKey === activeSortKey) {
+        cell.classList.add('simov-ext-sort-active');
+        if (!a.querySelector('.simov-ext-sort-arrow')) {
+          var arrow = document.createElement('span');
+          arrow.className = 'simov-ext-sort-arrow';
+          arrow.textContent = ' ▾';
+          a.appendChild(arrow);
+        }
+      }
+
+      if (a.dataset.simovSortWired === '1') return;
+      a.dataset.simovSortWired = '1';
+      a.addEventListener('click', function () {
+        try {
+          localStorage.setItem(storageKey, sortKey);
+        } catch (e) {}
+      });
+    });
+  }
+
+  // ---- Filtro instantaneo (no cliente) das linhas ja carregadas ----
+  // Complementa a pesquisa do servidor (que busca no banco inteiro): filtra
+  // na hora, sem postback, dentro dos resultados que ja estao na tela -
+  // util pra reduzir uma lista grande visualmente enquanto conferencia.
+  function setupGridQuickFilter(table) {
+    if (table.dataset.simovFilterReady === '1') return;
+    table.dataset.simovFilterReady = '1';
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'simov-ext-grid-filter';
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Filtrar linhas na tela...';
+    input.className = 'simov-ext-grid-filter-input';
+    input.autocomplete = 'off';
+
+    var count = document.createElement('span');
+    count.className = 'simov-ext-grid-filter-count';
+
+    wrapper.appendChild(input);
+    wrapper.appendChild(count);
+    table.parentNode.insertBefore(wrapper, table);
+
+    function applyFilter() {
+      var query = normalize(input.value);
+      var rows = table.querySelectorAll('tr.itemstyle, tr.alternateitemstyle');
+      var shown = 0;
+
+      Array.prototype.forEach.call(rows, function (row) {
+        var matches = !query || normalize(getRowDataText(row)).indexOf(query) !== -1;
+        row.classList.toggle('simov-ext-row-filtered-out', !matches);
+        if (matches) shown += 1;
+      });
+
+      count.textContent = query ? shown + ' de ' + rows.length : '';
+    }
+
+    input.addEventListener('input', applyFilter);
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') {
+        input.value = '';
+        applyFilter();
+        input.blur();
+      }
+      if (ev.key === 'Enter') ev.preventDefault();
+    });
+  }
+
+  // ---- Selecao de linhas (pra conferencia manual) ----
+  function getSelectedRowKeys() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEYS.selectedRows);
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setSelectedRowKeys(list) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.selectedRows, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function setRowSelected(row, isSelected) {
+    var key = row.dataset.simovRowKey;
+    if (!key) return;
+    var list = getSelectedRowKeys();
+    var idx = list.indexOf(key);
+    if (isSelected && idx === -1) list.push(key);
+    if (!isSelected && idx !== -1) list.splice(idx, 1);
+    setSelectedRowKeys(list);
+    row.classList.toggle('simov-ext-row-selected', isSelected);
+  }
+
+  function copySelectedRows(btn) {
+    var checkboxes = document.querySelectorAll(
+      'table.gridview .simov-ext-row-select:checked:not(.simov-ext-select-all)'
+    );
+    var lines = [];
+    Array.prototype.forEach.call(checkboxes, function (cb) {
+      var row = cb.closest('tr');
+      var table = cb.closest('table.gridview');
+      if (!row || !table) return;
+      lines.push(rowToText(row, getGridHeaders(table)));
+    });
+    if (!lines.length) return;
+
+    copyTextToClipboard(lines.join('\n'), function () {
+      var original = btn.textContent;
+      btn.textContent = 'Copiado!';
+      setTimeout(function () {
+        btn.textContent = original;
+      }, 1200);
+    });
+  }
+
+  function updateSelectionSummary() {
+    var selected = getSelectedRowKeys();
+    var bar = document.getElementById('simov-ext-selection-bar');
+
+    if (!selected.length) {
+      if (bar) bar.hidden = true;
+      return;
+    }
+
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'simov-ext-selection-bar';
+      bar.className = 'simov-ext-selection-bar';
+
+      var countEl = document.createElement('span');
+      countEl.className = 'simov-ext-selection-count';
+      bar.appendChild(countEl);
+
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'simov-ext-selection-copy';
+      copyBtn.textContent = 'Copiar selecionadas';
+      copyBtn.addEventListener('click', function () {
+        copySelectedRows(copyBtn);
+      });
+      bar.appendChild(copyBtn);
+
+      var clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'simov-ext-selection-clear';
+      clearBtn.textContent = 'Limpar selecao';
+      clearBtn.addEventListener('click', function () {
+        setSelectedRowKeys([]);
+        var checked = document.querySelectorAll('.simov-ext-row-select');
+        Array.prototype.forEach.call(checked, function (cb) {
+          cb.checked = false;
+          cb.indeterminate = false;
+        });
+        var selectedEls = document.querySelectorAll('.simov-ext-row-selected');
+        Array.prototype.forEach.call(selectedEls, function (row) {
+          row.classList.remove('simov-ext-row-selected');
+        });
+        updateSelectionSummary();
+      });
+      bar.appendChild(clearBtn);
+
+      document.body.appendChild(bar);
+    }
+
+    bar.hidden = false;
+    bar.querySelector('.simov-ext-selection-count').textContent =
+      selected.length + (selected.length === 1 ? ' linha selecionada' : ' linhas selecionadas');
+  }
+
+  function setupRowSelection(table) {
+    var selected = getSelectedRowKeys();
+
+    var headerRow = table.querySelector('tr.headerstyle');
+    if (headerRow && headerRow.dataset.simovSelectReady !== '1') {
+      headerRow.dataset.simovSelectReady = '1';
+      var firstHeaderCell = headerRow.querySelector('th, td');
+      if (firstHeaderCell) {
+        var selectAll = document.createElement('input');
+        selectAll.type = 'checkbox';
+        selectAll.className = 'simov-ext-row-select simov-ext-select-all';
+        selectAll.title = 'Selecionar/desmarcar todas as linhas desta pagina';
+        selectAll.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          var checked = selectAll.checked;
+          var currentRows = table.querySelectorAll('tr.itemstyle, tr.alternateitemstyle');
+          Array.prototype.forEach.call(currentRows, function (row) {
+            var cb = row.querySelector('.simov-ext-row-select');
+            if (!cb) return;
+            cb.checked = checked;
+            setRowSelected(row, checked);
+          });
+          updateSelectionSummary();
+        });
+        firstHeaderCell.insertBefore(selectAll, firstHeaderCell.firstChild);
+      }
+    }
+
+    var rows = table.querySelectorAll('tr.itemstyle, tr.alternateitemstyle');
+    Array.prototype.forEach.call(rows, function (row) {
+      if (row.dataset.simovSelectReady === '1') return;
+      row.dataset.simovSelectReady = '1';
+
+      // "Impressao digital" calculada antes de qualquer controle nosso ser
+      // inserido na linha, pra nao entrar lixo (texto de botao) na chave.
+      row.dataset.simovRowKey = getRowDataText(row);
+
+      var firstTd = row.querySelector('td');
+      if (!firstTd) return;
+
+      var checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'simov-ext-row-select';
+      checkbox.title = 'Selecionar esta linha';
+      checkbox.checked = selected.indexOf(row.dataset.simovRowKey) !== -1;
+      if (checkbox.checked) row.classList.add('simov-ext-row-selected');
+
+      checkbox.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        setRowSelected(row, checkbox.checked);
+        updateSelectionSummary();
+      });
+
+      firstTd.insertBefore(checkbox, firstTd.firstChild);
+    });
+
+    updateSelectionSummary();
+  }
+
+  function setupGridEnhancements() {
+    var tables = document.querySelectorAll('table.gridview');
+    Array.prototype.forEach.call(tables, function (table) {
+      setupGridSortIndicator(table);
+      setupGridQuickFilter(table);
+      setupRowSelection(table);
+    });
+  }
+
   // ---- Aviso ao sair de formulario com dados nao salvos ----
   // O SIMOV nao tem nenhuma protecao nativa contra perder um cadastro/edicao
   // em andamento - fechar a aba ou navegar pelo menu descarta tudo sem
@@ -633,6 +925,7 @@
     setupSearchCollapse();
     setupQuickCodeSearch();
     setupRowCopyButtons();
+    setupGridEnhancements();
     setupUnsavedChangesWarning();
     setupDarkModeToggle();
   }
